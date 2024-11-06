@@ -17,6 +17,8 @@ from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+import pandas as pd
+import json
 
 
 def mock_agent_ops_provider():
@@ -460,10 +462,25 @@ class Agent(BaseAgent):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            if "CreateFile" in str(e):
+                raise RuntimeError(
+                    f"Error while fetching server API version: {e}"
+                )
             raise RuntimeError(
                 f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
             )
+
+    def convert_json_to_excel(self, json_data: str) -> pd.DataFrame:
+        """Convert JSON data to a pandas DataFrame."""
+        data = json.loads(json_data)
+        df = pd.json_normalize(data)
+        return df
+
+    def save_excel_file(self, df: pd.DataFrame, file_name: str) -> None:
+        """Save the DataFrame to an Excel file in the current directory."""
+        file_path = os.path.join(os.getcwd(), file_name)
+        df.to_excel(file_path, index=False)
 
     @staticmethod
     def __tools_names(tools) -> str:

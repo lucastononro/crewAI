@@ -17,6 +17,7 @@ from crewai.tools import tool
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
+import pandas as pd
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -1574,3 +1575,41 @@ def test_agent_execute_task_with_ollama():
     result = agent.execute_task(task)
     assert len(result.split(".")) == 2
     assert "AI" in result or "artificial intelligence" in result.lower()
+
+
+def test_convert_json_to_excel():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+
+    json_data = '[{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]'
+    df = agent.convert_json_to_excel(json_data)
+
+    assert isinstance(df, pd.DataFrame)
+    assert df.shape == (2, 2)
+    assert list(df.columns) == ["name", "age"]
+    assert df.iloc[0]["name"] == "John"
+    assert df.iloc[1]["name"] == "Jane"
+
+
+def test_save_excel_file(tmpdir):
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+
+    df = pd.DataFrame({"name": ["John", "Jane"], "age": [30, 25]})
+    file_name = "test.xlsx"
+    file_path = tmpdir.join(file_name)
+
+    agent.save_excel_file(df, str(file_path))
+
+    assert os.path.exists(file_path)
+    saved_df = pd.read_excel(file_path)
+    assert saved_df.shape == (2, 2)
+    assert list(saved_df.columns) == ["name", "age"]
+    assert saved_df.iloc[0]["name"] == "John"
+    assert saved_df.iloc[1]["name"] == "Jane"
